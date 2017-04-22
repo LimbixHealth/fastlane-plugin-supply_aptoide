@@ -1,4 +1,5 @@
 # coding: utf-8
+
 lib = File.expand_path("../lib", __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'fastlane/plugin/supply_aptoide/version'
@@ -10,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.email         = "wschurman@limbix.com"
 
   spec.summary       = "Upload metadata, screenshots and binaries to Aptoide"
-  # spec.homepage      = "https://github.com/<GITHUB_USERNAME>/fastlane-plugin-supply_aptoide"
+  spec.homepage      = "https://github.com/LimbixHealth/fastlane-plugin-supply_aptoide"
   spec.license       = "MIT"
 
   spec.files         = Dir["lib/**/*"] + %w(README.md LICENSE)
