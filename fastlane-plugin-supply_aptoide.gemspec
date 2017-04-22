@@ -7,7 +7,7 @@ require 'fastlane/plugin/supply_aptoide/version'
 Gem::Specification.new do |spec|
   spec.name          = 'fastlane-plugin-supply_aptoide'
   spec.version       = Fastlane::SupplyAptoide::VERSION
-  spec.author        = "William Schurman"
+  spec.author        = "wschurman"
   spec.email         = "wschurman@limbix.com"
 
   spec.summary       = "Upload metadata, screenshots and binaries to Aptoide"
@@ -18,10 +18,7 @@ Gem::Specification.new do |spec|
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ['lib']
 
-  # Don't add a dependency to fastlane or fastlane_re
-  # since this would cause a circular dependency
-
-  # spec.add_dependency 'your-dependency', '~> 1.0.0'
+  spec.add_dependency 'json'
 
   spec.add_development_dependency 'pry'
   spec.add_development_dependency 'bundler'

@@ -1,8 +1,132 @@
+require 'json'
+
 module Fastlane
   module Actions
     class SupplyAptoideAction < Action
       def self.run(params)
-        UI.message("The supply_aptoide plugin is working!")
+        repo = params[:repo]
+        only_user_repo = params[:only_user_repo]
+        apk = params[:apk]
+
+        username = params[:username]
+        password = params[:password]
+        json_credential_path = params[:json_credential_path]
+        if json_credential_path
+          username, password = self.parse_json_credentials(json_credential_path)
+        end
+
+        access_token = self.fetch_aptoid_access_token(username, password)
+        return unless access_token
+
+        command = "curl -X POST \"https://webservices.aptoide.com/webservices/3/uploadAppToRepo\""
+        command += " -F access_token=#{access_token}"
+        command += " -F repo=#{repo}"
+        command += " -F mode=json"
+        command += " -F apk=@\"#{apk}\""
+        command += " -F only_user_repo=#{only_user_repo}"
+
+        response = Actions.sh(command)
+        unless response
+          UI.error "Could not contact Aptoide to upload apk"
+          return
+        end
+
+        parsed_response = nil
+        begin
+          parsed_response = JSON.parse(response)
+        rescue JSON::ParserError
+          UI.error "Invalid JSON returned by Apotide apk upload"
+          return
+        end
+
+        if parsed_response["status"] != "OK"
+          UI.error "Aptoide apk upload errors: #{response.errors}"
+          return
+        end
+
+        UI.message "Successfully uploaded apk to Aptoide: #{parsed_response['url']}"
+      end
+
+      def self.parse_json_credentials(json_credential_path)
+        parsed = JSON.parse(File.read(File.expand_path(json_credential_path)))
+        return parsed["username"], parsed["password"]
+      end
+
+      def self.fetch_aptoid_access_token(username, password)
+        command_dict = {
+          grant_type: "password",
+          client_id: "Aptoide",
+          mode: "json",
+          username: username,
+          password: password
+        }
+
+        command = "curl -H \"Content-Type: application/json\""
+        command += " -X POST \"http://www.aptoide.com/webservices/3/oauth2Authentication\""
+        command += " -d \"#{command_dict.to_json}\""
+
+        response = Actions.sh(command)
+        unless response
+          UI.error "Could not contact Aptoide to fetch access token"
+          return nil
+        end
+
+        parsed_response = nil
+        begin
+          parsed_response = JSON.parse(response)
+        rescue JSON::ParserError
+          UI.error "Invalid JSON returned by Apotide access token fetch"
+          return nil
+        end
+
+        if parsed_response["error"]
+          UI.error "Aptoide access token fetch error: #{response.error_description}"
+          return nil
+        end
+
+        return parsed_response["access_token"]
+      end
+
+      def self.available_options
+        [
+          FastlaneCore::ConfigItem.new(key: :json_credential_path,
+                                       env_name: "SUPPLY_APTOIDE_JSON_CREDENTIAL_PATH",
+                                       short_option: "-c",
+                                       conflicting_options: [:username, :password],
+                                       description: "JSON file containing object with username and password for authentication",
+                                       default_value: CredentialsManager::AppfileConfig.try_fetch_value(:aptoide_json_credential_file),
+                                       verify_block: proc do |value|
+                                         UI.user_error! "'#{value}' doesn't seem to be a JSON file" unless FastlaneCore::Helper.json_file?(File.expand_path(value))
+                                         begin
+                                           parsed_value = JSON.parse(File.read(File.expand_path(value)))
+                                           UI.user_error! "JSON must be an object with \"username\" and \"password\" keys" if parsed_value["username"].empty? || parsed_value["password"].empty?
+                                         rescue JSON::ParserError
+                                           UI.user_error! "Could not parse Aptoide account json -- JSON::ParseError"
+                                         end
+                                       end),
+          FastlaneCore::ConfigItem.new(key: :repo,
+                                       env_name: "SUPPLY_APTOIDE_REPO",
+                                       short_option: "-r",
+                                       description: "User repository name"),
+          FastlaneCore::ConfigItem.new(key: :only_user_repo,
+                                       env_name: "SUPPLY_APTOIDE_ONLY_USER_REPO",
+                                       short_option: "-x",
+                                       description: "If true, the application gets uploaded only to the repository given in the repo argument. If false or ommited, the application gets uploaded to the official apps repository as well."),
+          FastlaneCore::ConfigItem.new(key: :apk,
+                                       env_name: "SUPPLY_APK",
+                                       description: "Path to the APK file to upload",
+                                       short_option: "-b",
+                                       default_value: Dir["*.apk"].last || Dir[File.join("app", "build", "outputs", "apk", "app-Release.apk")].last,
+                                       optional: true,
+                                       verify_block: proc do |value|
+                                         UI.user_error! "Could not find apk file at path '#{value}'" unless File.exist?(value)
+                                         UI.user_error! "apk file is not an apk" unless value.end_with?('.apk')
+                                       end)
+        ]
+      end
+
+      def self.is_supported?(platform)
+        [:android].include?(platform)
       end
 
       def self.description
@@ -10,34 +134,11 @@ module Fastlane
       end
 
       def self.authors
-        ["William Schurman"]
-      end
-
-      def self.return_value
-        # If your method provides a return value, you can describe here what it does
+        ["wschurman"]
       end
 
       def self.details
-        # Optional:
         "Drop-in replacement for supply that uploads to Aptoide instead."
-      end
-
-      def self.available_options
-        [
-          # FastlaneCore::ConfigItem.new(key: :your_option,
-          #                         env_name: "SUPPLY_APTOIDE_YOUR_OPTION",
-          #                      description: "A description of your option",
-          #                         optional: false,
-          #                             type: String)
-        ]
-      end
-
-      def self.is_supported?(platform)
-        # Adjust this if your plugin only works for a particular platform (iOS vs. Android, for example)
-        # See: https://github.com/fastlane/fastlane/blob/master/fastlane/docs/Platforms.md
-        #
-        # [:ios, :mac, :android].include?(platform)
-        true
       end
     end
   end
