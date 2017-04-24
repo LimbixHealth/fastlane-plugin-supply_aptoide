@@ -14,9 +14,28 @@ fastlane add_plugin supply_aptoide
 
 Upload metadata, screenshots and binaries to Aptoide.
 
-## Example
 
-Check out the [example `Fastfile`](fastlane/Fastfile) to see how to use this plugin. Try it by cloning the repo, running `fastlane install_plugins` and `bundle exec fastlane test`.
+## Setup & Usage
+
+1) Create a JSON file containing your aptoide username and password somewhere on the filesystem.
+
+```
+{
+  "username": "...",
+  "password": "..."
+}
+```
+
+2) Add supply_aptoide action to Fastfile after gradle build action.
+
+```
+supply_aptoide(
+  json_credential_path: './aptoide-credentials.json', # path to JSON file from above
+  repo: "#{your_aptoide_repo_here}", # aptoide private repo
+  only_user_repo: true,
+  apk: "#{lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH]}"
+)
+```
 
 ## Run tests for this plugin
 
