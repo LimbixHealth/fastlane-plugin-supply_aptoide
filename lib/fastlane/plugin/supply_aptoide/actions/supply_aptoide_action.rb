@@ -1,4 +1,5 @@
 require 'json'
+require 'typhoeus'
 
 module Fastlane
   module Actions
@@ -17,25 +18,29 @@ module Fastlane
 
         UI.message "Got access token: '#{access_token}', starting upload..."
 
-        command = "curl -s -X POST \"https://webservices.aptoide.com/webservices/3/uploadAppToRepo\""
-        command += " -F access_token=#{access_token}"
-        command += " -F repo=#{repo}"
-        command += " -F mode=json"
-        command += " -F apk=@\"#{apk}\""
-
+        params = {
+          access_token: access_token,
+          repo: repo,
+          mode: "json",
+          apk: File.open(apk, "r")
+        }
         if only_user_repo
-          command += " -F only_user_repo=true"
+          params[:only_user_repo] = true
         end
 
-        response = Actions.sh(command)
-        unless response
+        response = Typhoeus.post(
+          "https://webservices.aptoide.com/webservices/3/uploadAppToRepo",
+          body: params
+        )
+
+        unless response.success?
           UI.error "Could not contact Aptoide to upload apk"
           return
         end
 
         parsed_response = nil
         begin
-          parsed_response = JSON.parse(response)
+          parsed_response = JSON.parse(response.response_body)
         rescue JSON::ParserError
           UI.error "Invalid JSON returned by Apotide apk upload"
           return
@@ -55,7 +60,7 @@ module Fastlane
       end
 
       def self.fetch_aptoid_access_token(username, password)
-        command_dict = {
+        params = {
           grant_type: "password",
           client_id: "Aptoide",
           mode: "json",
@@ -63,26 +68,27 @@ module Fastlane
           password: password
         }
 
-        command = "curl -s -H \"Content-Type: application/json\""
-        command += " -X POST \"http://webservices.aptoide.com/webservices/3/oauth2Authentication\""
-        command += " -d '#{command_dict.to_json}'"
+        response = Typhoeus.post(
+          "http://webservices.aptoide.com/webservices/3/oauth2Authentication",
+          headers: { 'Content-Type' => "application/json" },
+          body: params.to_json
+        )
 
-        response = Actions.sh(command)
-        unless response
+        unless response.success?
           UI.error "Could not contact Aptoide to fetch access token"
           return nil
         end
 
         parsed_response = nil
         begin
-          parsed_response = JSON.parse(response)
+          parsed_response = JSON.parse(response.response_body)
         rescue JSON::ParserError
-          UI.error "Invalid JSON returned by Apotide access token fetch: #{response}"
+          UI.error "Invalid JSON returned by Apotide access token fetch: #{response.response_body}"
           return nil
         end
 
         if parsed_response["error"]
-          UI.error "Aptoide access token fetch error: #{response.error_description}"
+          UI.error "Aptoide access token fetch error: #{parsed_response['error_description']}"
           return nil
         end
 
