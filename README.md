@@ -19,7 +19,7 @@ Upload metadata, screenshots and binaries to Aptoide.
 
 1) Create a JSON file containing your aptoide username and password somewhere on the filesystem.
 
-```
+```json
 {
   "username": "...",
   "password": "..."
@@ -28,7 +28,7 @@ Upload metadata, screenshots and binaries to Aptoide.
 
 2) Add supply_aptoide action to Fastfile after gradle build action.
 
-```
+```ruby
 supply_aptoide(
   json_credential_path: './aptoide-credentials.json', # path to JSON file from above
   repo: "#{your_aptoide_repo_here}", # aptoide private repo
@@ -41,12 +41,12 @@ supply_aptoide(
 
 To run both the tests, and code style validation, run
 
-```
+```sh
 rake
 ```
 
 To automatically fix many of the styling issues, use
-```
+```sh
 rubocop -a
 ```
 
