@@ -14,8 +14,13 @@ fastlane add_plugin supply_aptoide
 
 Upload metadata, screenshots and binaries to Aptoide.
 
-
 ## Setup & Usage
+
+#### Prerequisites
+
+- Creation of app on store must be done on Aptoide web interface since this plugin doesn't support metadata.
+
+#### Fastlane
 
 1) Create a JSON file containing your aptoide username and password somewhere on the filesystem.
 
